@@ -34,12 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ----- API calls -----
 async function fetchCreditors() {
-  const res = await fetch('http://localhost:4000/api/creditors');
+  const res = await fetch('/api/creditors');
   creditors = await res.json();
 }
 
 async function createCreditor(payload) {
-  const res = await fetch('http://localhost:4000/api/creditors', {
+  const res = await fetch('/api/creditors', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -48,7 +48,7 @@ async function createCreditor(payload) {
 }
 
 async function updateCreditor(id, payload) {
-  const res = await fetch(`http://localhost:4000/api/creditors/${id}`, {
+  const res = await fetch(`/api/creditors/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -57,7 +57,7 @@ async function updateCreditor(id, payload) {
 }
 
 async function deleteCreditorApi(id) {
-  await fetch(`http://localhost:4000/api/creditors/${id}`, {
+  await fetch(`/api/creditors/${id}`, {
     method: 'DELETE'
   });
 }
