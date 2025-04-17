@@ -19,20 +19,17 @@ const historyCredNameEl = document.getElementById('history-creditor-name');
 
 // ----- Initialization -----
 document.addEventListener('DOMContentLoaded', async () => {
-  // Show today's date
   currentDateEl.textContent = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
 
-  // Wire up search
   searchInput.addEventListener('input', onSearchInput);
 
-  // Fetch data & render
   await fetchCreditors();
   renderAll();
 });
 
-// ----- API calls -----
+// ----- API calls (updated URLs) -----
 async function fetchCreditors() {
   const res = await fetch('/api/creditors');
   creditors = await res.json();
@@ -80,34 +77,31 @@ function renderAll() {
 }
 
 function renderCreditors(list = creditors) {
-  // sort: pending & overdue first by followUp date, then paid
   const unpaid = list.filter(c => c.status !== 'paid')
-                     .sort((a,b) => new Date(a.followUp || 0) - new Date(b.followUp || 0));
-  const paid   = list.filter(c => c.status === 'paid')
-                     .sort((a,b) => new Date(a.followUp || 0) - new Date(b.followUp || 0));
+    .sort((a, b) => new Date(a.followUp || 0) - new Date(b.followUp || 0));
+  const paid = list.filter(c => c.status === 'paid')
+    .sort((a, b) => new Date(a.followUp || 0) - new Date(b.followUp || 0));
   const sorted = [...unpaid, ...paid];
 
-  creditorsTbody.innerHTML = sorted.map(creditor => `
+  creditorsTbody.innerHTML = sorted.map(c => `
     <tr>
-      <td class="name-column clickable" onclick="showHistoryPanel('${creditor._id}')">
-        ${creditor.name}
-        ${creditor.status === 'overdue' 
-          ? '<span class="status-indicator"><div class="status-dot overdue"></div> OVERDUE</span>' 
+      <td class="name-column clickable" onclick="showHistoryPanel('${c._id}')">
+        ${c.name}
+        ${c.status === 'overdue'
+          ? '<span class="status-indicator"><div class="status-dot overdue"></div> OVERDUE</span>'
           : ''}
       </td>
-      <td>${new Date(creditor.lastVisit).toLocaleDateString()}</td>
-      <td>${creditor.followUp 
-        ? new Date(creditor.followUp).toLocaleDateString() 
-        : '-'}</td>
+      <td>${new Date(c.lastVisit).toLocaleDateString()}</td>
+      <td>${c.followUp ? new Date(c.followUp).toLocaleDateString() : '-'}</td>
       <td>
         <div class="status-indicator">
-          <div class="status-dot ${creditor.status}"></div>
-          ${creditor.status.toUpperCase()}
+          <div class="status-dot ${c.status}"></div>
+          ${c.status.toUpperCase()}
         </div>
       </td>
       <td class="actions-cell">
-        <button class="btn-success" onclick="markPaid('${creditor._id}')">💵</button>
-        <button class="btn-primary" onclick="showCalendar('${creditor._id}')">📅</button>
+        <button class="btn-success" onclick="markPaid('${c._id}')">💵</button>
+        <button class="btn-primary" onclick="showCalendar('${c._id}')">📅</button>
       </td>
     </tr>
   `).join('');
@@ -122,13 +116,10 @@ function renderCreditors(list = creditors) {
 }
 
 function renderTodaysPayees() {
-  // Fix: use local date instead of UTC
-  const localToday = new Date();
-  const today = localToday.toLocaleDateString('en-CA'); // format: YYYY-MM-DD
+  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
 
   const todays = creditors.filter(c => {
     if (!c.followUp || c.status !== 'pending') return false;
-
     const followUpDate = new Date(c.followUp).toLocaleDateString('en-CA');
     return followUpDate === today;
   });
@@ -150,9 +141,7 @@ function renderTodaysPayees() {
   payeeCountEl.textContent = todays.length;
 }
 
-
-
-// ----- Event handlers ----- 
+// ----- Actions -----
 async function addCreditor() {
   nameErrorEl.textContent = '';
   const name = nameInput.value.trim().toUpperCase();
@@ -170,53 +159,23 @@ async function addCreditor() {
   nameInput.value = '';
 }
 
-// In your script.js…
-
 async function markPaid(id) {
   const nextTue = getNextTuesday();
   const entry = {
-    date:    new Date().toISOString(),
-    action:  'PAYMENT RECEIVED',
+    date: new Date().toISOString(),
+    action: 'PAYMENT RECEIVED',
     details: `Marked as paid. Next follow-up: ${nextTue}`,
-    amount:  null
+    amount: null
   };
-
   const updated = await updateCreditor(id, {
-    status:       'paid',
-    lastVisit:    new Date().toISOString(),
-    followUp:     nextTue,
+    status: 'paid',
+    lastVisit: new Date().toISOString(),
+    followUp: nextTue,
     historyEntry: entry
   });
-
   creditors = creditors.map(c => c._id === updated._id ? updated : c);
   renderAll();
 }
-
-async function saveReschedule() {
-  if (!modalDatePicker.value) {
-    alert('Please select a follow-up date');
-    return;
-  }
-
-  const entry = {
-    date:    new Date().toISOString(),
-    action:  'RESCHEDULED',
-    details: `New follow-up date: ${modalDatePicker.value}`,
-    amount:  null
-  };
-
-  const updated = await updateCreditor(currentCreditorId, {
-    status:       'pending',
-    lastVisit:    new Date().toISOString(),
-    followUp:     modalDatePicker.value,
-    historyEntry: entry
-  });
-
-  creditors = creditors.map(c => c._id === updated._id ? updated : c);
-  calendarModal.style.display = 'none';
-  renderAll();
-}
-
 
 function showCalendar(id) {
   currentCreditorId = id;
@@ -227,32 +186,25 @@ function showCalendar(id) {
 
 async function saveReschedule() {
   if (!modalDatePicker.value) {
-    alert('Please select a follow‑up date');
+    alert('Please select a follow-up date');
     return;
   }
-
-  // Build the history entry
   const entry = {
-    date:    new Date().toISOString(),
-    action:  'RESCHEDULED',
-    details: `New follow‑up date: ${modalDatePicker.value}`,
-    amount:  null
+    date: new Date().toISOString(),
+    action: 'RESCHEDULED',
+    details: `New follow-up date: ${modalDatePicker.value}`,
+    amount: null
   };
-
-  // Send the update + historyEntry
   const updated = await updateCreditor(currentCreditorId, {
-    status:       'pending',
-    lastVisit:    new Date().toISOString(),
-    followUp:     modalDatePicker.value,
-    historyEntry: entry        // ← this is the key
+    status: 'pending',
+    lastVisit: new Date().toISOString(),
+    followUp: modalDatePicker.value,
+    historyEntry: entry
   });
-
-  // Update local state & UI
   creditors = creditors.map(c => c._id === updated._id ? updated : c);
   calendarModal.style.display = 'none';
   renderAll();
 }
-
 
 function closeCalendar() {
   calendarModal.style.display = 'none';
@@ -311,8 +263,7 @@ function closeHistoryPanel() {
   panelOverlay.style.display = 'none';
 }
 
-// ----- Global click to close modals -----
 window.addEventListener('click', e => {
   if (e.target === calendarModal) closeCalendar();
-  if (e.target === panelOverlay)   closeHistoryPanel();
+  if (e.target === panelOverlay) closeHistoryPanel();
 });
