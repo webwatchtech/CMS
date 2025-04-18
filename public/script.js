@@ -128,12 +128,9 @@ function renderTodaysPayees() {
     <div class="payee-item">
       <div>
         <div class="payee-name">${c.name}</div>
-        <div class="text-muted small">
-          Last visited: ${new Date(c.lastVisit).toLocaleDateString()}
         </div>
-      </div>
       <div class="text-muted">
-        ${new Date(c.followUp).toLocaleDateString()}
+        Last visited: ${new Date(c.followUp).toLocaleDateString()}
       </div>
     </div>
   `).join('');
